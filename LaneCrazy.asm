@@ -4,9 +4,21 @@
 ;(C) 2021 Blazon Games Division
 ;------------------------------------------
 
+
+
  !to "lanecrazy.prg",cbm
 
-;Variables:
+;Temp:
+titlescreen = $3000 
+ 
+
+;Raster splits 
+
+split1 = $2e
+split2 = $d1
+split3 = $e4
+split4 = $f2
+
 screentemp = $c000
 screenbackup = $c100
 ;Hardware screen + Colour RAM
@@ -58,8 +70,10 @@ gamescreen
 ;Main game code
  
  *=$3000
+          lda $02a6
+          sta system
+ 
           sei
-          
           lda #0
           sta firebutton
           
@@ -73,6 +87,8 @@ initptr   lda #$00
           inx
           cpx #initpointersend-initpointersstart
           bne initptr
+          lda #$10
+          sta ypos
           
           ;Prepare game graphics 
           
@@ -80,6 +96,8 @@ initptr   lda #$00
           sta $d018
           lda #$08
           sta $d016 
+          lda #0
+          sta levelpointer
           
           ldx #$00
 drawgamescreen
@@ -102,7 +120,7 @@ drawgamescreen
           inx
           bne drawgamescreen
           
-          lda #$31
+          lda #$30
           sta leveltext+1 
           lda #$30
           sta leveltext
@@ -178,7 +196,6 @@ paintspr  lda sprite_colour_table,x
           txs
           
           ;Initialise interrupts 
-          
           ldx #<game_irq1
           ldy #>game_irq1
           stx $0314
@@ -186,7 +203,7 @@ paintspr  lda sprite_colour_table,x
           lda #$7f
           sta $dc0d
           sta $dd0d
-          lda #$2e
+          lda #$00
           sta $d012
           lda #$1b
           sta $d011
@@ -195,22 +212,10 @@ paintspr  lda sprite_colour_table,x
           sta $d01a
           lda #0
           jsr musicinit
-          jmp game_main_loop
+          cli
+          jsr level_setup
           
-;Main IRQ interrupts. This has to be divided, where one part is 
-;used for smooth scrolling and the other is being used for 
-;the score panel.
 
-game_irq1 asl $d019
-          lda $dc0d
-          sta $dd0d
-          lda #$fa
-          sta $d012
-          lda #1
-          sta rt
-          jsr musicplay
-          jmp $ea7e
-          
 ;Main routines for game
 
 game_main_loop
@@ -221,7 +226,7 @@ game_main_loop
           jsr ball_shifter
           jsr player_control
           jsr collision
-          
+          jsr playing_time
           jmp game_main_loop
           
 ;Synchronise game timer           
@@ -286,41 +291,109 @@ player_control
 upj2      lda #1 ;UP - Joystick port 2
           bit $dc00
           bne upj1
-          jsr ball1_trigger ;Movement control for first ball
+          jmp ball1_trigger ;Movement control for first ball
+         
           
 upj1      lda #1
           bit $dc01 ;Now test joystick port 1
           bne downj2
-          jsr ball1_trigger
-
+          jmp ball1_trigger
+          
+          
 downj2    lda #2 ;DOWN - Joystick port 2
           bit $dc00
           bne downj1
-          jsr ball2_trigger ;Movement control for second ball
+          jmp ball2_trigger
+          
 downj1    lda #2
           bit $dc01 ;Now try joystick port 1
           bne leftj2
-          jsr ball2_trigger
-
+          jmp ball2_trigger
+           
+          
 leftj2    lda #4 ;LEFT - Joystick port 2
           bit $dc00
           bne leftj1 
-          jsr ball3_trigger ;Movement control for third ball
+          jmp ball3_trigger ;Movement control for third ball
+          
           
 leftj1    lda #4
           bit $dc01
           bne rightj2
-          jsr ball3_trigger
+          jmp ball3_trigger
+          
           
 rightj2   lda #8 ;RIGHT - Joystick port 2
           bit $dc00
           bne rightj1 
-          jsr ball4_trigger ;Movement control for final ball
+          jmp ball4_trigger ;Movement control for final ball
+          
 rightj1   lda #8
           bit $dc01 
           bne nojoy
           jmp ball4_trigger
-nojoy     rts          
+nojoy    
+          ;Test keyboard press (keys 1,2,3,4 
+          
+          jsr $ffe4
+          cmp #'Z'
+          beq triggerball1
+          cmp #'X'
+          beq triggerball2
+          cmp #'C'
+          beq triggerball3
+          cmp #'V'
+          beq triggerball4
+          jmp check_key_runstop
+triggerball1
+          jmp ball1_trigger
+triggerball2          
+          jmp ball2_trigger
+triggerball3
+          jmp ball3_trigger
+triggerball4
+          jmp ball4_trigger
+          
+          
+          ;Check key Run/Stop for pause 
+          ;mode 
+check_key_runstop
+          lda #$7f
+          sta $dc00
+          lda $dc01
+          cmp #$7f 
+          bne not_pause_game
+          jmp pause_mode
+not_pause_game          
+          rts
+          
+          ;The game is paused, Fire resumes, or Q to abort game 
+          
+pause_mode          
+          lda #16
+          bit $dc00
+          bne check_pause_fire2
+          rts
+check_pause_fire2
+          lda #16 
+          bit $dc00
+          bne check_quit_key
+          rts
+check_quit_key 
+          lda #$7f 
+          sta $dc00
+          lda $dc01
+          cmp #$bf
+          bne pause_mode
+quitgame
+          jmp titlescreen
+          
+          
+          
+          
+          
+
+          rts          
 ;Ball trigger routines. Basically, we test to see whether or
 ;not the ball is already moving, and if it isn't test the 
 ;last direction of the ball. 
@@ -412,18 +485,26 @@ shiftb4        +moveball ball_4_is_moving, ball_4_dir, objpos+12, objpos+14, xle
                     
           
 ;Clear out interrupts
-clearint
+clearint  
           ldx #$31
           ldy #$ea
           stx $0314
           sty $0315
-          lda #$81
-          sta $dc0d
-          sta $dd0d
           lda #$00
           sta $d019
           sta $d01a
-          cli 
+      
+          lda #$81
+          sta $dc0d
+          sta $dd0d
+          ldx #$00
+zerosidaway
+          lda #$00
+          sta $d400,x
+          inx
+          cpx #$18
+          bne zerosidaway
+        
 skipscroll          
           rts
           
@@ -440,46 +521,36 @@ getpanel  lda panel,x
 ;Scroll the main game screen ... (YPOS)
 
 scroll_screen
-          lda ypos
-          sec
-speed     sbc #1
-          and #7
+          lda ypos 
+          clc
+speed     adc #1
           sta ypos 
-          bcs skipscroll
+          lda ypos 
+          cmp #$18 
+          bcc exitscrollcontrol
+          lda #$10
+          sta ypos 
+          jsr scrollactive
+exitscrollcontrol          
+          rts 
+scrollactive          
+          lda #$10
+          sta ypos
      
           jsr shiftrows1
           jsr shiftrows2
           jsr pick_holes
-          ldx #$00
+          ldx #$27
 checkpass
           lda screen+(19*40),x
           cmp #holechar1
-          beq scoreit
-          cmp #holechar2
-          beq scoreit
-          cmp #holechar3
-          beq scoreit
-          cmp #holechar4
-          beq scoreit
-          inx
-          cpx #40
-          bne checkpass
+          beq scoreit_
+          dex
+          bpl checkpass
           rts
-          
-scoreit   inc score+4
-          ldx #$04
-calc      lda score,x
-          cmp #$3a
-          bne nextd
-          lda #$30
-          sta score,x
-          inc score-1,x
-nextd     dex
-          bne calc
-          jsr maskpanel
-          rts
-            
+scoreit_  jmp scoreit
           ;Hard scroll segment 1
+        
 shiftrows1
           ldx #$27
 sr01          
@@ -630,8 +701,7 @@ csm3      sta screenbackup
           lda #holechar4
 csm4      sta screenbackup
           rts
-         
-         
+                  
           ;Sprite to character set collision - If the player
           ;falls down a hole, the game is up. <- Note, this needs 
           ;to correspond to all sprites.
@@ -831,6 +901,34 @@ removesprites
           cpx #$10
           bne removesprites
           
+          ;Check player score with hi score 
+          
+          lda score
+          sec 
+          lda hiscore+5
+          sbc score+5
+          lda hiscore+4
+          sbc score+4
+          lda hiscore+3
+          sbc score+3
+          lda hiscore+2
+          sbc score+2
+          lda hiscore+1
+          sbc score+1
+          lda hiscore
+          sbc score
+          bpl game_over_loop 
+
+          ;Player score becomes new hi score 
+          
+          ldx #$00
+makenewhi lda score,x
+          sta hiscore,x 
+          inx
+          cpx #$06
+          bne makenewhi
+          jsr maskpanel
+          
           ;Wait for the player to press fire to play 
           
 game_over_loop          
@@ -842,24 +940,192 @@ game_over_loop
           lsr
           bit firebutton
           ror firebutton
+          bmi game_over_loop2
+          bvc game_over_loop2
+          jmp titlescreen
+game_over_loop2          
+          lda $dc01 
+          lsr
+          lsr
+          lsr
+          lsr
+          lsr
+          bit firebutton
+          ror firebutton
           bmi game_over_loop
           bvc game_over_loop
-          jmp $3000
+          jmp titlescreen
+          
+;Game playing time. This will of course control 
+;the game playing time during play. 1 minute until 
+;level up.
+
+playing_time 
+          lda leveltime
+          cmp #$32
+          beq onesecond
+          inc leveltime
+          rts
+onesecond 
+          lda #0
+          sta leveltime 
+          jsr scoreit2
+         
+          lda leveltime+1
+          cmp #60
+          beq oneminute
+          inc leveltime+1
+          rts
+oneminute          
+          
+;Setup levels 
+level_setup
+          lda #0
+          sta spawntime
+          lda #0
+          sta leveltime
+          sta leveltime+1
+         
+          ldx levelpointer
+          stx $d020 
+          lda level_speed_table,x
+          sta speed+1
+          lda level_time_table,x
+          sta spawnlimit
+          lda levelpointer
+          cmp #9
+          beq stop
+          inc levelpointer
+          inc leveltext+1
+          jsr maskpanel
+          rts
+stop      ldx #8
+          stx levelpointer
+          jsr maskpanel
+          rts
+          
+scoreit2  inc score+4
+          ldx #4
+calc2     lda score,x
+          cmp #$3a
+          bne scok2
+          lda #$30
+          sta score,x 
+          inc score-1,X
+scok2     dex
+          bne calc2
+          jsr maskpanel
+          rts
+          
+
+scoreit   inc score+3
+          ldx #$03
+calc      lda score,x
+          cmp #$3a
+          bne nextd
+          lda #$30
+          sta score,x
+          inc score-1,x
+nextd     dex
+          bne calc
+          jsr maskpanel
+          rts
+                      
+          
+;Main IRQ interrupts. This has to be divided, where one part is 
+;used for smooth scrolling and the other is being used for 
+;the score panel.
+;Main Interrupts for the soft scrolling test SEU.
+;We use stack control in order to stabilize the interrupts
+
+
+          ;Game scrolling background IRQ
+
+game_irq1
+          ;Raster split 1 
+          inc $d019
+          lda #split1
+          sta $d012
+          jsr musicplayer
+          ldx #<game_irq2
+          ldy #>game_irq2 
+          stx $0314
+          sty $0315
+          jmp $ea81 
+          
+          ;Raster split2 
+game_irq2 inc $d019
+          lda #split2
+          sta $d012 
+          lda ypos
+          sta $d011
+          ldx #<game_irq3
+          ldy #>game_irq3 
+          stx $0314
+          sty $0315
+       
+          jmp $ea81
+          
+          ;Raster 3
+game_irq3 
+          inc $d019
+          lda #split3
+          sta $d012
+          lda #$7f 
+          sta $d011
+          lda #1
+          sta rt
+         
+          ldx #<game_irq4
+          ldy #>game_irq4
+          stx $0314
+          sty $0315 
+          jmp $ea81 
+          
+game_irq4
+          inc $d019 
+          lda #split4
+          sta $d012 
+          lda #$1f
+          sta $d011
+           
+          ldx #<game_irq1
+          ldy #>game_irq1
+          stx $0314
+          sty $0315
+          jmp $ea31
           
           
+musicplayer
           
+          lda system
+          cmp #1
+          beq pal 
+          inc ntsctimer
+          lda ntsctimer
+          cmp #6
+          beq resetntsc
+pal       jsr musicplay
+          
+          rts 
+resetntsc lda #0
+          sta ntsctimer
+          rts
+          
+          
+system !byte 0
+ntsctimer !byte 0
 random !byte %10011101,%01011011
 rantemp1 !byte 0
           
-          
-          
-          
-          
+leveltime
+          !byte 0,0
+                    
 ;Game pointers and tables
 rt        !byte 0 
 firebutton !byte 0
 levelpointer !byte 0
-
+ypos !byte 0
 initpointersstart
 death_anim_delay !byte 0
 death_anim_pointer !byte 0
@@ -878,22 +1144,23 @@ animpointer !byte 0
 
 holeposition !byte 0
 spawntime !byte 0
+spawnlimit !byte 0
 initpointersend
-ypos !byte 0
+
 ;Game player object position
 objpos !fill $10,$00
             
 ;Game sprites starting position
 
 ball_start_position
-          !byte $16,$b8 ;$16 = Left, $20 = Right
-          !byte $16,$b8 ;-----------------------
-          !byte $3e,$b8 ;$3e = Left, $48 = Right
-          !byte $3e,$b8 ;-----------------------
-          !byte $66,$b8 ;$66 = Left, $70 = Right
-          !byte $66,$b8 ;-----------------------
-          !byte $8e,$b8 ;$8e = Left, $98 = Right
-          !byte $8e,$b8 ;-----------------------
+          !byte $16,$a8 ;$16 = Left, $20 = Right
+          !byte $16,$a8 ;-----------------------
+          !byte $3e,$a8 ;$3e = Left, $48 = Right
+          !byte $3e,$a8 ;-----------------------
+          !byte $66,$a8 ;$66 = Left, $70 = Right
+          !byte $66,$a8 ;-----------------------
+          !byte $8e,$a8 ;$8e = Left, $98 = Right
+          !byte $8e,$a8 ;-----------------------
           
 ;Sprite colour table 
 sprite_colour_table
@@ -921,6 +1188,15 @@ hole1 !byte $03,$05 ,$0d,$0f ,$17,$19 ,$21,$23
 hole2 !byte $04,$06 ,$0e,$10 ,$18,$1a ,$22,$24
 hole3 !byte $2b,$2d ,$35,$37 ,$3f,$41 ,$49,$4b
 hole4 !byte $2c,$2e ,$36,$38 ,$40,$42 ,$4a,$4c
+
+!align $ff,$00
+
+;Level table. (Based on speed and amount)
+
+level_speed_table 
+            !byte 1,1,2,2,3,3,4,4 
+level_time_table
+            !byte $10,$08,$0e,$0c,$0e,$0c,$0c,$0a
 
   !ct scr
 panel            ;!text "----------------------------------------"

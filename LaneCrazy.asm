@@ -15,8 +15,8 @@ titlescreen = $3000
 ;Raster splits 
 
 split1 = $2e
-split2 = $d1
-split3 = $e4
+split2 = $d0
+split3 = $da
 split4 = $f2
 
 screentemp = $c000
@@ -30,10 +30,11 @@ musicinit = $1000
 musicplay = $1003
 
 ;Hazard char values 
-holechar1 = $a0
-holechar2 = $a0
-holechar3 = $a0
-holechar4 = $a0
+holechar1 = 34
+holechar2 = 35
+holechar3 = 36
+holechar4 = 37
+lanechar = 38
 
 ;Stop zone for balls
 
@@ -51,7 +52,7 @@ zp = $02
 
 ;Import game charset data
  *=$0800
- !bin "bin\gamecharset.bin"
+ !bin "bin\gamecharset.chr"
   
 ;Import game music data
  *=$1000
@@ -94,8 +95,12 @@ initptr   lda #$00
           
           lda #$12  
           sta $d018
-          lda #$08
+          lda #$18
           sta $d016 
+          lda #$0e
+          sta $d022
+          lda #$01
+          sta $d023
           lda #0
           sta levelpointer
           
@@ -131,7 +136,7 @@ zeroscore lda #$30
           cpx #$06
           bne zeroscore
           
-          lda #$0f
+          lda #$00
           sta $d020
           sta $d021
           
@@ -291,7 +296,7 @@ player_control
 upj2      lda #1 ;UP - Joystick port 2
           bit $dc00
           bne upj1
-          jmp ball1_trigger ;Movement control for first ball
+          jmp ball2_trigger ;Movement control for blue ball
          
           
 upj1      lda #1
@@ -303,24 +308,24 @@ upj1      lda #1
 downj2    lda #2 ;DOWN - Joystick port 2
           bit $dc00
           bne downj1
-          jmp ball2_trigger
+          jmp ball3_trigger
           
 downj1    lda #2
           bit $dc01 ;Now try joystick port 1
           bne leftj2
-          jmp ball2_trigger
+          jmp ball3_trigger
            
           
 leftj2    lda #4 ;LEFT - Joystick port 2
           bit $dc00
           bne leftj1 
-          jmp ball3_trigger ;Movement control for third ball
+          jmp ball1_trigger ;Movement control for third ball
           
           
 leftj1    lda #4
           bit $dc01
           bne rightj2
-          jmp ball3_trigger
+          jmp ball1_trigger
           
           
 rightj2   lda #8 ;RIGHT - Joystick port 2
@@ -554,8 +559,8 @@ scoreit_  jmp scoreit
 shiftrows1
           ldx #$27
 sr01          
-          lda screen+(19*40),x
-          sta screen+(20*40),x
+       ;   lda screen+(19*40),x
+       ;   sta screen+(20*40),x
           lda screen+(18*40),x
           sta screen+(19*40),x
           lda screen+(17*40),x
@@ -603,10 +608,10 @@ sr02      lda screentemp,x
           sta screen+(2*40),x
           lda screen,x
           sta screen+(1*40),x
-          lda screenbackup+(1*40),x
+          lda screenbackup+40,x
           sta screen,x
           lda screenbackup,x
-          sta screenbackup+(1*40),x
+          sta screenbackup+40,x
           dex
           bpl sr02
 skipspawn          
@@ -621,7 +626,7 @@ pick_holes
           beq skipspawn
           cmp #$10
           beq spawnhole
-          lda #$20 ;Empty lane/space
+          lda #lanechar ;Empty lane/space
           sta screenbackup+$03
           sta screenbackup+$04
           sta screenbackup+$05
@@ -804,7 +809,7 @@ checkchars
           cmp #holechar2
           beq death
           cmp #holechar3
-          beq ball1death
+          beq death
           cmp #holechar4 
           beq death 
           rts 

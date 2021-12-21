@@ -5,10 +5,11 @@
 ;========================================
 ;Main game code
 ;========================================
-
+onetime
           lda $02a6 ;<--- Remove this when final build
           sta system ;is ready and place at the beginning of code
- 
+game_code          
+         
 ;----------------------------------------
 ;Initialise game settings and clear all
 ;pointers
@@ -17,9 +18,10 @@
           sei
           lda #0
           sta firebutton
-          
+            
           jsr clearint
-          
+          lda #$7b 
+          sta $d011
           ldx #$00
 initptr   lda #$00
           sta initpointersstart,x
@@ -113,31 +115,104 @@ getscreen lda gamescreen,x
           
           ;Multiple JSR routines increase 4x 
           
-          ldx $fb
+          ldx #$fb
           txs
           
 ;----------------------------------------
 ;Initialise IRQ raster interrupts for the
 ;game.
 ;----------------------------------------
-          ldx #<game_irq1
-          ldy #>game_irq1
-          stx $0314
-          sty $0315
+         
           lda #$7f
           sta $dc0d
           sta $dd0d
-          lda #$30
+          lda #$32
           sta $d012
           lda #$1b
           sta $d011
           lda #$01
           sta $d019
           sta $d01a
+          ldx #<game_irq1
+          ldy #>game_irq1
+          stx $0314
+          sty $0315
           lda #0
           jsr musicinit
           cli
+          jmp setup_get_ready 
+
+;---------------------------------------          
+;Main IRQ interrupts. This has to be 
+;divided, where one part is used for 
+;smooth scrolling and the other is being 
+;used for the score panel.
+;----------------------------------------
+;Main IRQ interrupts. This has to be 
+;divided, where one part is used for 
+;smooth scrolling and the other is being 
+;used for the score panel.
+;----------------------------------------
+                    ;Game scrolling background IRQ
+
+game_irq1
+          ;Raster split 1 
+          inc $d019
+          lda #split1
+          sta $d012
           
+          jsr musicplayer
+         
+          ldx #<game_irq2
+          ldy #>game_irq2 
+          stx $0314
+          sty $0315
+          jmp $ea31
+          
+          ;Raster split2 
+game_irq2 inc $d019
+          lda #split2
+          sta $d012 
+          lda ypos
+          sta $d011
+          ldx #<game_irq3
+          ldy #>game_irq3 
+          stx $0314
+          sty $0315
+       
+          jmp $ea7e
+          
+          ;Raster 3
+game_irq3 
+          inc $d019
+          lda #split3
+          sta $d012
+          lda #$7f 
+          sta $d011
+          lda #1
+          sta rt
+         
+          ldx #<game_irq4
+          ldy #>game_irq4
+          stx $0314
+          sty $0315 
+          jmp $ea7e 
+          
+game_irq4
+          inc $d019 
+          lda #split4
+          sta $d012 
+          lda #$1f
+          sta $d011
+           
+          ldx #<game_irq1
+          ldy #>game_irq1
+          stx $0314
+          sty $0315
+          jmp $ea7e
+          
+          
+setup_get_ready          
           ;Setup the game level (once)
           jsr level_setup
           
@@ -268,19 +343,13 @@ paintspr  lda sprite_colour_table,x
 game_main_loop
           ;Synchronise game timer via 
           ;subroutine.
+          
           jsr sync_timer
-         
-          jsr scroll_screen
-          jsr parallax
-          jsr expand_sprite_area
-          jsr animate_sprites
-         
-         
-          jsr player_control
-           jsr ball_shifter
-          jsr collision
-          jsr playing_time
-         
+          jsr scroll_properties
+       
+          jsr sprite_properties
+          jsr player_properties
+            
           ;Loop routine until game over.
           jmp game_main_loop
           
@@ -290,12 +359,26 @@ game_main_loop
 ;raster time).
 ;----------------------------------------
 sync_timer  
-          ldx #0
-          stx rt
-          cpx rt
+          lda #0
+          sta rt
+          cmp rt
           beq *-3
           rts
-
+;----------------------------------------
+;Game scroll properties          
+;----------------------------------------
+scroll_properties
+          
+          jsr scroll_screen
+          jsr playing_time
+          jsr parallax
+          rts
+;Sprite properties and animation
+;----------------------------------------
+sprite_properties
+          jsr expand_sprite_area
+          jsr animate_sprites
+          rts
 ;----------------------------------------
 ;Expand the sprite area so that all 
 ;sprites can use more than 256 pixels
@@ -344,18 +427,21 @@ animdelayok
 resetanim ldx #$00
           stx animpointer
           rts
-
+;----------------------------------------
+;Player game properties 
 ;----------------------------------------          
+player_properties 
+
+          jsr player_control
+          jsr ball_shifter
+          jsr collision
+          rts
 ;Player game control. This can be by 
-;using a joystick in port 1, 2 or by 
-;using keys ASDF, HJKL. 
+;using a joystick in port 1, 2
 ;----------------------------------------
 player_control
-         jsr joycontrol 
-         jsr keycontrol
-         rts 
-joycontrol
-         
+        
+          
 upj2      lda #1 ;UP - Joystick port 2
           bit $dc00
           bne upj1
@@ -400,9 +486,7 @@ rightj1   lda #8
           bit $dc01 
           bne nojoy
           jmp ball4_trigger
-nojoy     rts
-          ;Test keyboard press (keys 1,2,3,4 
-keycontrol          
+nojoy       ;Test keyboard press (keys ASDF, HJKL)
           jsr $ffe4
           cmp #'A'
           beq triggerball1
@@ -420,7 +504,6 @@ keycontrol
           beq triggerball3
           cmp #'L'
           beq triggerball4
-          
           ;Now check if RUN/STOP has been pressed 
           ;to pause game.
           
@@ -529,7 +612,7 @@ ball4_trigger +triggerball ball_4_is_moving, ball_4_dir
               ;Ball moves to the right 
               ldx ball_underlay_x
               inx
-              inx
+              ;inx
               cpx #stop_zone_right 
               bcc .storright
               lda #0
@@ -542,7 +625,7 @@ ball4_trigger +triggerball ball_4_is_moving, ball_4_dir
               ;Ball moves to the left  
 .moveleft     ldx ball_underlay_x
               dex
-              dex
+             ; dex
               cpx #stop_zone_left 
               bcs .storleft 
               lda #0
@@ -623,14 +706,15 @@ speed     adc #1
           lda #$10
           sta ypos 
           jsr scrollactive
-exitscrollcontrol          
+exitscrollcontrol  
+      
           rts 
 scrollactive          
           lda #$10
           sta ypos
      
           jsr shiftrows1
-          jsr shiftrows2
+          ;jsr shiftrows2
           jsr pick_holes
           jmp passcheck
 passcheck          
@@ -644,42 +728,16 @@ checkpass
           rts
 scoreit_  jmp scoreit
           ;Hard scroll segment 1
-        
+      
 shiftrows1
           ldx #$27
 sr01          
-      
-          lda screen+(18*40),x
-          sta screen+(19*40),x
-          lda screen+(17*40),x
-          sta screen+(18*40),x
-          lda screen+(16*40),x
-          sta screen+(17*40),x
-          lda screen+(15*40),x
-          sta screen+(16*40),x
-          lda screen+(14*40),x
-          sta screen+(15*40),x
-          lda screen+(13*40),x
-          sta screen+(14*40),x
-          lda screen+(12*40),x
-          sta screen+(13*40),x
-          lda screen+(11*40),x
-          sta screentemp,x
-          dex
-          bpl sr01
-          
-          rts
-          
-shiftrows2          
-          ldx #$27
-sr02      lda screentemp,x
-          sta screen+(12*40),x
-          lda screen+(10*40),x
-          sta screen+(11*40),x
+          lda screen+(10*40),x 
+          sta screentemp,x 
           lda screen+(9*40),x
           sta screen+(10*40),x
           lda screen+(8*40),x
-          sta screen+(9*40),x
+          sta screen+(9*40),x 
           lda screen+(7*40),x
           sta screen+(8*40),x
           lda screen+(6*40),x
@@ -695,20 +753,44 @@ sr02      lda screentemp,x
           lda screen+(1*40),x
           sta screen+(2*40),x
           lda screen,x
-          sta screen+(1*40),x
+          sta screen+(1*40),x 
+          
           lda screenbackup+40,x
           sta screen,x
           lda screenbackup,x
           sta screenbackup+40,x
+          dex
+          bpl sr01
           
           
-       
+          
+shiftrows2          
+          ldx #$27
+sr02      lda screen+(18*40),x
+          sta screen+(19*40),x
+          lda screen+(17*40),x
+          sta screen+(18*40),x
+          lda screen+(16*40),x
+          sta screen+(17*40),x
+          lda screen+(15*40),x
+          sta screen+(16*40),x
+          lda screen+(14*40),x
+          sta screen+(15*40),x
+          lda screen+(13*40),x
+          sta screen+(14*40),x
+          lda screen+(12*40),x
+          sta screen+(13*40),x
+          lda screen+(11*40),x
+          sta screen+(12*40),x
+          lda screentemp,x
+          sta screen+(11*40),x
+         
           dex
           bpl sr02
           jsr fetch_lane
 skipspawn          
           rts
-          
+                 
 ;Randomizer - Pick holes for game_irq1
           
 pick_holes          
@@ -1153,7 +1235,7 @@ onesecond
           jsr scoreit2
          
           lda leveltime+1
-          cmp #60
+          cmp #30
           beq oneminute
           inc leveltime+1
           rts
@@ -1169,8 +1251,8 @@ level_setup
           sta leveltime
           sta leveltime+1
          
-          ldx levelpointer
-          stx $d020 
+          ;ldx levelpointer
+          ;stx $d020 
           lda level_speed_table,x
           sta speed+1
           lda level_time_table,x
@@ -1245,12 +1327,13 @@ resetspriteflash  ldx #$00
 ;Paralax scrolling                  
 ;----------------------------------------          
 
-parallax          lda $d011
-                  cmp $03
-                  bne scroll 
-                  rts 
-scroll            lda $d011
-                  sta $03
+parallax          lda paradelay 
+                  cmp #3
+                  beq scrollpara 
+                  inc paradelay 
+                  rts
+scrollpara        lda #0
+                  sta paradelay
                   lda paralaxchar1
                   pha 
                   lda paralaxchar3
@@ -1293,73 +1376,12 @@ uploop4           lda paralaxchar4+1,x
                   sta paralaxchar4+7
                   rts
                   
-;Main IRQ interrupts. This has to be 
-;divided, where one part is used for 
-;smooth scrolling and the other is being 
-;used for the score panel.
-;----------------------------------------
-                    ;Game scrolling background IRQ
-
-game_irq1
-          ;Raster split 1 
-          inc $d019
-          lda #split1
-          sta $d012
-          
-          jsr musicplayer
-         
-          ldx #<game_irq2
-          ldy #>game_irq2 
-          stx $0314
-          sty $0315
-          jmp $ea31
-          
-          ;Raster split2 
-game_irq2 inc $d019
-          lda #split2
-          sta $d012 
-          lda ypos
-          sta $d011
-          ldx #<game_irq3
-          ldy #>game_irq3 
-          stx $0314
-          sty $0315
-       
-          jmp $ea7e
-          
-          ;Raster 3
-game_irq3 
-          inc $d019
-          lda #split3
-          sta $d012
-          lda #$7f 
-          sta $d011
-          lda #1
-          sta rt
-         
-          ldx #<game_irq4
-          ldy #>game_irq4
-          stx $0314
-          sty $0315 
-          jmp $ea7e 
-          
-game_irq4
-          inc $d019 
-          lda #split4
-          sta $d012 
-          lda #$1f
-          sta $d011
-           
-          ldx #<game_irq1
-          ldy #>game_irq1
-          stx $0314
-          sty $0315
-          jmp $ea7e
-          
 ;----------------------------------------
 ;PAL/NTSC music IRQ player          
 ;----------------------------------------          
 musicplayer
+          lda #1
+          sta rt
         
           lda system
           cmp #1
@@ -1394,9 +1416,11 @@ rp        !byte 0
 firebutton !byte 0
 levelpointer !byte 0
 ypos !byte 0
+ypos2 !byte 0
 initpointersstart
 death_anim_delay !byte 0
 death_anim_pointer !byte 0
+paradelay !byte 0
 ;Move direction for ball         
 ball_1_dir !byte 0
 ball_2_dir !byte 0

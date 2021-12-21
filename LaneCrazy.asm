@@ -18,12 +18,6 @@ titlescreen = $4000
 ;Run address
 check_hall_of_fame = $4000 
 
-;In game raster splits 
-split1 = $30
-split2 = $d0
-split3 = $da
-split4 = $fa
-
 ;Where the wrapping screen backup is 
 ;positioned in order to build a lane 
 screentemp = $c000
@@ -83,6 +77,12 @@ sprite_Y = $95
 sprite_M = $96
 sprite_O = $97
 sprite_V = $98
+
+;In game raster splits 
+split1 = $30
+split2 = $d0
+split3 = $da
+split4 = $fa
 
 ;----------------------------------------
 ;Import in game charset data from raw

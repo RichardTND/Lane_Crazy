@@ -189,8 +189,7 @@ game_irq3
           sta $d012
           lda #$7f 
           sta $d011
-          lda #1
-          sta rt
+        
          
           ldx #<game_irq4
           ldy #>game_irq4
@@ -702,21 +701,18 @@ speed     adc #1
           sta ypos 
           lda ypos 
           cmp #$18 
-          bcc exitscrollcontrol
-          lda #$10
-          sta ypos 
-          jsr scrollactive
-exitscrollcontrol  
-      
-          rts 
+          bcs scrollactive
+          rts
+         
 scrollactive          
           lda #$10
           sta ypos
+          
      
           jsr shiftrows1
           ;jsr shiftrows2
           jsr pick_holes
-          jmp passcheck
+           
 passcheck          
           ldx #$27
 checkpass
@@ -762,9 +758,6 @@ sr01
           dex
           bpl sr01
           
-          
-          
-shiftrows2          
           ldx #$27
 sr02      lda screen+(18*40),x
           sta screen+(19*40),x
@@ -1251,7 +1244,7 @@ level_setup
           sta leveltime
           sta leveltime+1
          
-          ;ldx levelpointer
+          ldx levelpointer
           ;stx $d020 
           lda level_speed_table,x
           sta speed+1
@@ -1412,11 +1405,10 @@ leveltime
                     
 ;Game pointers and tables
 rt        !byte 0 
-rp        !byte 0
 firebutton !byte 0
 levelpointer !byte 0
 ypos !byte 0
-ypos2 !byte 0
+
 initpointersstart
 death_anim_delay !byte 0
 death_anim_pointer !byte 0

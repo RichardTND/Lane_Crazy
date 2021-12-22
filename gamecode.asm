@@ -8,6 +8,10 @@
 onetime
           lda $02a6 ;<--- Remove this when final build
           sta system ;is ready and place at the beginning of code
+          lda #251
+          sta 808
+          lda #8
+          jsr $ffd2
 game_code          
          
 ;----------------------------------------
@@ -137,7 +141,8 @@ getscreen lda gamescreen,x
           ldy #>game_irq1
           stx $0314
           sty $0315
-          lda #0
+          ;Init GET READY jingle for game start
+          lda #get_ready_jingle
           jsr musicinit
           cli
           jmp setup_get_ready 
@@ -160,6 +165,12 @@ game_irq1
           inc $d019
           lda #split1
           sta $d012
+levelcolour1 
+          lda #$0b
+          sta $d022
+levelcolour2          
+          lda #$01
+          sta $d023
           
           jsr musicplayer
          
@@ -179,7 +190,7 @@ game_irq2 inc $d019
           ldy #>game_irq3 
           stx $0314
           sty $0315
-       
+        
           jmp $ea7e
           
           ;Raster 3
@@ -189,7 +200,10 @@ game_irq3
           sta $d012
           lda #$7f 
           sta $d011
-        
+          lda #$0e
+          sta $d022
+          lda #$01
+          sta $d023
          
           ldx #<game_irq4
           ldy #>game_irq4
@@ -203,7 +217,8 @@ game_irq4
           sta $d012 
           lda #$1f
           sta $d011
-           
+             lda #1
+          sta rt   
           ldx #<game_irq1
           ldy #>game_irq1
           stx $0314
@@ -237,14 +252,14 @@ setupgrsprites
           cpx #8
           bne setupgrsprites
           
-          lda #$44 ;Starting X position 
+          lda #$46 ;Starting X position 
           sta objpos
           clc
           adc #$10
           sta objpos+2
           adc #$10
           sta objpos+4
-          lda #$34
+          lda #$36
           sta objpos+6
           clc
           adc #$10 
@@ -334,7 +349,9 @@ paintspr  lda sprite_colour_table,x
           cpx #$08
           bne paintspr
 
-
+          ;Now init in game music 
+          lda #in_game_music
+          jsr musicinit
 ;----------------------------------------
 ;The main has started. This is the main
 ;game loop, with multiple pointers. 
@@ -438,54 +455,93 @@ player_properties
 ;Player game control. This can be by 
 ;using a joystick in port 1, 2
 ;----------------------------------------
+
 player_control
+          lda $dc01 ;Read joystick port 1 up
+          lsr 
+          bit joyup_p1
+          ror joyup_p1 
+          bmi not_joy_up_port1
+          bvc not_joy_up_port1
+          lda #0
+          sta joyup_p1
+          jmp triggerball2
+not_joy_up_port1      
         
-          
-upj2      lda #1 ;UP - Joystick port 2
-          bit $dc00
-          bne upj1
-          jmp ball2_trigger ;Movement control for blue ball
+          lsr ;Read joystick port 1 down
+          bit joydown_p1
+          ror joydown_p1 
+          bmi not_joy_down_port1
+          bvc not_joy_down_port1
+          lda #0
+          sta joyup_p1
+          jmp triggerball3 
          
+not_joy_down_port1          
+
+          lsr ;Read joystick port 1 left
+          bit joyleft_p1 
+          ror joyleft_p1 
+          bmi not_joy_left_port1
+          bvc not_joy_left_port2 
+          lda #0
+          sta joyleft_p1 
+          jmp triggerball1 
           
-upj1      lda #1
-          bit $dc01 ;Now test joystick port 1
-          bne downj2
-          jmp ball1_trigger
+not_joy_left_port1
+
+          lsr ;Read joystick port 1 right
+          bit joyright_p1 
+          ror joyright_p1
+          bmi not_joy_right_port1
+          bvc not_joy_right_port1 
+          lda #0
+          sta joyright_p1 
+          jmp triggerball4
           
+not_joy_right_port1 ;Now read joystick port 2 
+          lda $dc00
+          lsr       ;Read up 
+          bit joyup_p2 
+          ror joyup_p2 
+          bmi not_joy_up_port2 
+          bvc not_joy_up_port2
+          lda #0
+          sta joyup_p2
+          jmp triggerball2 
           
-downj2    lda #2 ;DOWN - Joystick port 2
-          bit $dc00
-          bne downj1
-          jmp ball3_trigger
+not_joy_up_port2 
+          lsr       ;Read down 
+          bit joydown_p2
+          ror joydown_p2
+          bmi not_joy_down_port2
+          bvc not_joy_down_port2 
+          lda #0
+          sta joydown_p2 
+          jmp triggerball3
           
-downj1    lda #2
-          bit $dc01 ;Now try joystick port 1
-          bne leftj2
-          jmp ball3_trigger
-           
+not_joy_down_port2 
+          lsr       ;Read left 
+          bit joyleft_p2
+          ror joyleft_p2 
+          bmi not_joy_left_port2
+          bvc not_joy_left_port2
+          lda #0
+          sta joyleft_p2 
+          jmp triggerball1
           
-leftj2    lda #4 ;LEFT - Joystick port 2
-          bit $dc00
-          bne leftj1 
-          jmp ball1_trigger ;Movement control for third ball
+not_joy_left_port2
+          lsr       ;Read right 
+          bit joyright_p2 
+          ror joyright_p2 
+          bmi not_joy_right_port2
+          bvc not_joy_right_port2 
+          lda #0
+          sta joyright_p2 
+          jmp triggerball4
           
-          
-leftj1    lda #4
-          bit $dc01
-          bne rightj2
-          jmp ball1_trigger
-          
-          
-rightj2   lda #8 ;RIGHT - Joystick port 2
-          bit $dc00
-          bne rightj1 
-          jmp ball4_trigger ;Movement control for final ball
-          
-rightj1   lda #8
-          bit $dc01 
-          bne nojoy
-          jmp ball4_trigger
-nojoy       ;Test keyboard press (keys ASDF, HJKL)
+not_joy_right_port2          
+          ;Test keyboard input
           jsr $ffe4
           cmp #'A'
           beq triggerball1
@@ -611,7 +667,7 @@ ball4_trigger +triggerball ball_4_is_moving, ball_4_dir
               ;Ball moves to the right 
               ldx ball_underlay_x
               inx
-              ;inx
+              inx
               cpx #stop_zone_right 
               bcc .storright
               lda #0
@@ -624,7 +680,7 @@ ball4_trigger +triggerball ball_4_is_moving, ball_4_dir
               ;Ball moves to the left  
 .moveleft     ldx ball_underlay_x
               dex
-             ; dex
+              dex
               cpx #stop_zone_left 
               bcs .storleft 
               lda #0
@@ -712,7 +768,7 @@ scrollactive
           jsr shiftrows1
           ;jsr shiftrows2
           jsr pick_holes
-           
+          jsr scoreit2 
 passcheck          
           ldx #$27
 checkpass
@@ -1092,6 +1148,7 @@ deathframe2
 ;and display flashing GAME OVER sprites
 ;----------------------------------------          
 do_game_over
+          
           ldx #$00
 removesprites
           lda #$00
@@ -1114,7 +1171,7 @@ setgospr  lda game_over_sprite_table,x
           
           ;Setup start position for GAME OVER text
           
-          lda #$40 ;Starting X position 
+          lda #$3e ;Starting X position 
           sta objpos
           clc
           adc #$10
@@ -1123,7 +1180,7 @@ setgospr  lda game_over_sprite_table,x
           sta objpos+4
           adc #$10
           sta objpos+6
-          lda #$40 
+          lda #$3d 
           sta objpos+8
           clc
           adc #$10
@@ -1144,6 +1201,9 @@ setgospr  lda game_over_sprite_table,x
           sta objpos+13
           sta objpos+15
 
+          ;Init game over jingle 
+          lda #game_over_jingle 
+          jsr musicinit
 ;----------------------------------------          
           ;Check player score with hi score
           
@@ -1174,7 +1234,7 @@ makenewhi lda score,x
           jsr maskpanel
           
           ;Wait for the player to press fire to play 
-          
+            
 game_over_loop        
           jsr sync_timer
           jsr expand_sprite_area
@@ -1225,7 +1285,7 @@ playing_time
 onesecond 
           lda #0
           sta leveltime 
-          jsr scoreit2
+          
          
           lda leveltime+1
           cmp #30
@@ -1245,16 +1305,30 @@ level_setup
           sta leveltime+1
          
           ldx levelpointer
-          ;stx $d020 
+    
           lda level_speed_table,x
           sta speed+1
           lda level_time_table,x
           sta spawnlimit
+          lda level_colour_table,x
+          sta levelcolour1+1
+          lda level_charset_table_lo,x 
+          sta charsm+1
+          lda level_charset_table_hi,x
+          sta charsm+2
+          
+        
           lda levelpointer
           cmp #9
           beq stop
           inc levelpointer
           inc leveltext+1
+          ldx #$00
+charsm    lda scrollchar1,x
+          sta paralaxchar1,x
+          inx
+          cpx #32
+          bne charsm
           jsr maskpanel
           rts
 stop      ldx #8
@@ -1373,8 +1447,7 @@ uploop4           lda paralaxchar4+1,x
 ;PAL/NTSC music IRQ player          
 ;----------------------------------------          
 musicplayer
-          lda #1
-          sta rt
+      
         
           lda system
           cmp #1
@@ -1410,6 +1483,16 @@ levelpointer !byte 0
 ypos !byte 0
 
 initpointersstart
+;Controlled joystick pointers, (simple taps rather than holding)
+joyup_p1 !byte 0
+joydown_p1 !byte 0
+joyleft_p1 !byte 0
+joyright_p1 !byte 0
+joyup_p2 !byte 0
+joydown_p2 !byte 0
+joyleft_p2 !byte 0
+joyright_p2 !byte 0
+
 death_anim_delay !byte 0
 death_anim_pointer !byte 0
 paradelay !byte 0
@@ -1452,10 +1535,10 @@ ball_start_position
           
 ;Sprite colour table 
 sprite_colour_table
-            !byte $02,$0a
-            !byte $06,$0e
-            !byte $05,$0d
-            !byte $08,$07
+            !byte $0a,$02
+            !byte $0e,$06
+            !byte $0d,$05
+            !byte $07,$0f
           
 ;Sprite animation table (Rolling ball)
 ball_overlay_anim1 !byte $81,$82,$83,$84
@@ -1465,9 +1548,9 @@ ball_overlay_anim4 !byte $84,$81,$82,$83
 
 
 ;Animation table for ball death - Underlay 
-ball_fall_anim1  !byte $85,$86,$87,$88,$89
+ball_fall_anim2  !byte $85,$86,$87,$88,$89
 ;Animation table for ball death - Overlay
-ball_fall_anim2  !byte $8a,$8b,$8c,$8d,$8e
+ball_fall_anim1  !byte $8a,$8b,$8c,$8d,$8e
 
 ;Possible hole spawn locations
 
@@ -1482,10 +1565,19 @@ hole4 !byte $2c,$2e ,$36,$38 ,$40,$42 ,$4a,$4c
 ;Level table. (Based on speed and amount)
 
 level_speed_table 
-            !byte 1,1,2,2,3,3,4,4 
+            !byte 1,1,1,1,2,2,2,2
 level_time_table
-            !byte $10,$08,$0e,$0c,$0e,$0c,$0c,$0a
-
+            !byte $10,$08,$06,$04,$0e,$0c,$0a,$08
+level_colour_table
+            !byte $06,$0b,$09,$02,$0e,$0c,$08,$04
+level_charset_table_lo 
+            !byte <scrollchar1, <scrollchar2, <scrollchar3, <scrollchar4 
+            !byte <scrollchar2, <scrollchar1, <scrollchar4, <scrollchar3
+            
+level_charset_table_hi 
+            !byte >scrollchar1, >scrollchar2, >scrollchar3, >scrollchar4 
+            !byte >scrollchar2, >scrollchar1, >scrollchar4, >scrollchar3
+            
                   !ct scr
 panel             !text "score: "
 score             !text "000000    "
@@ -1506,9 +1598,12 @@ game_over_sprite_table
                   
 ;Sprite flashing colour table 
 get_ready_flash_table 
-                  !byte $06,$05,$0e,$03,$0d,$01,$0d,$03,$0e,$05
+                  !byte $06,$04,$0e,$03,$0d,$01,$0d,$03,$0e,$04,$06
+                  !byte $09,$02,$08,$0a,$07,$01,$07,$0a,$08,$02,$09
 game_over_flash_table 
-                  !byte $09,$02,$08,$0a,$07,$01,$07,$0a,$08,$02
+                  
+                  !byte $06,$04,$0e,$03,$0d,$01,$0d,$03,$0e,$04,$06
+                  !byte $09,$02,$08,$0a,$07,$01,$07,$0a,$08,$02,$09
 flash_length      
                   
                   

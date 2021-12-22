@@ -28,10 +28,21 @@ screen = $0400
 colour = $d800
 
 ;Music pointers
-titlemusicinit = $1000
-titlemusicplay = $1003
+in_game_music = $00
+get_ready_jingle = $01
+game_over_jingle = $02
+
+;Music properties
 musicinit = $1000
 musicplay = $1003
+
+;Title music
+music2init = $5000
+music2play = $5003
+
+;Hi score name entry music 
+music3init = $6000
+music3play = $6003
 
 ;Char values (These are
 ;the characters that form the
@@ -48,6 +59,10 @@ paralaxchar2 = gamecharset+(42*8)
 paralaxchar3 = gamecharset+(43*8)
 paralaxchar4 = gamecharset+(44*8)
 
+scrollchar1 = gamecharset+(80*8)
+scrollchar2 = gamecharset+(84*8)
+scrollchar3 = gamecharset+(88*8)
+scrollchar4 = gamecharset+(90*8)
 ;Stop zone position for balls
 ;every time they move.
 
@@ -111,3 +126,10 @@ gamescreen
  *=$4000
  !source "gamecode.asm"
 ;---------------------------------------- 
+;Import title music data (DMC V4.0)
+;*=$6000 
+ ;!bin "bin\music2.prg",,2
+;----------------------------------------
+;Import hall of fame music data (DMC V4.0) 
+;*=$7000
+ ;!bin "bin\music3.prg",,2

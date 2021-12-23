@@ -37,12 +37,12 @@ musicinit = $1000
 musicplay = $1003
 
 ;Title music
-music2init = $5000
-music2play = $5003
+music2init = $6000
+music2play = $6003
 
 ;Hi score name entry music 
-music3init = $6000
-music3play = $6003
+music3init = $7000
+music3play = $7003
 
 ;Char values (These are
 ;the characters that form the
@@ -99,6 +99,7 @@ split2 = $d0
 split3 = $da
 split4 = $fa
 
+logocolour = $8000
 ;----------------------------------------
 ;Import in game charset data from raw
 ;binary 
@@ -122,14 +123,34 @@ gamecharset
 gamescreen
  !bin "bin\gamescreen.bin" 
 ;----------------------------------------
+;2x2 Character set for front end 
+ *=$3000
+ !bin "bin\2x2charset.prg",,2
+;----------------------------------------
 ;Insert Main game code
  *=$4000
  !source "gamecode.asm"
+;----------------------------------------
+;Insert title screen code 
+ *=$5000
+ !source "titlescreen.asm" 
 ;---------------------------------------- 
 ;Import title music data (DMC V4.0)
-;*=$6000 
- ;!bin "bin\music2.prg",,2
+*=$6000 
+!bin "bin\music2.prg",,2
 ;----------------------------------------
 ;Import hall of fame music data (DMC V4.0) 
 ;*=$7000
  ;!bin "bin\music3.prg",,2
+;-----------------------------------------
+;Import title logo colour RAM, video RAM 
+;and bitmap data
+*=$8000
+  !bin "bin\logo-colram.prg",,2
+*=$8400
+  !bin "bin\logo-vidram.prg",,2
+*=$8800
+  !source "scrolltext.asm"  
+*=$a000
+  !bin "bin\logo-bitmap.prg",,2
+;------------------------------------------

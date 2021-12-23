@@ -12,6 +12,7 @@ onetime
           sta 808
           lda #8
           jsr $ffd2
+          jmp title_screen
 game_code          
          
 ;----------------------------------------

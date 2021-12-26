@@ -1,4 +1,4 @@
-;========================================
+﻿;========================================
 ;Lane Crazy 
 ;by Richard (Starhawk) Bayliss
 ;(C) 2021 Blazon Games Division
@@ -112,7 +112,8 @@ tirq1    asl $d019
         sta $dd0d
         lda #$2e
         sta $d012
-        
+        lda #0
+        sta $d020
         lda #$1b 
         sta $d011
         lda xpos
@@ -205,6 +206,7 @@ titleloop
         ror firebutton
         bmi jp2
         bvc jp2 
+        jmp options_screen
 jp2     lda $dc00
         lsr
         lsr
@@ -215,7 +217,7 @@ jp2     lda $dc00
         ror firebutton 
         bmi titleloop
         bvc titleloop
-        jmp game_code
+        jmp options_screen
 
 ;---------------------------------
 ;Scroll text routine
@@ -223,7 +225,7 @@ jp2     lda $dc00
 scrolltext_routine
         lda xpos
         sec
-        sbc #2
+        sbc #3
         and #7
         sta xpos
         bcs exitscroll
@@ -301,7 +303,7 @@ switchnext
          jmp storenext
 resettext
         ldx #0
-        stx fadepointer 
+        stx textpointer 
 storenext
         ldx #$00
 textstore
@@ -407,28 +409,246 @@ resetntsctitle
           lda #0
           sta ntsctimer
           rts
-        
+ 
+;---------------------------------------------
+;Game Options screen code (IRQ is still on)
+;---------------------------------------------
+options_screen
+          ldx #$00
+removealltext
+          lda #$20
+plot      sta screen+(13*40),x
+          sta screen+(14*40),x
+          sta screen+(15*40),x
+          sta screen+(16*40),x
+          sta screen+(17*40),x
+          sta screen+(18*40),x 
+          sta screen+(19*40),x 
+          sta screen+(20*40),x
+          sta screen+(21*40),x
+          sta screen+(22*40),x
+          inx
+          cpx #40
+          bne plot
+          
+          ;Display the options screen text 
+          lda #1
+          sta fadestore
+          
+          ldx #$00
+          ldy #$00
+fetch_option_text          
+          txa
+          lda gameoptions,x
+          sta screen+(13*40),y
+          eor #$40
+          sta screen+(13*40)+1,y 
+          lda gameoptions,x 
+          eor #$80 
+          sta screen+(14*40),y 
+          eor #$40
+          sta screen+(14*40)+1,y 
+          
+          lda gameoptions+(1*20),x
+          sta screen+(17*40),y 
+          eor #$40
+          sta screen+(17*40)+1,y
+          lda gameoptions+(1*20),x
+          eor #$80
+          sta screen+(18*40),y
+          eor #$40
+          sta screen+(18*40)+1,y 
+          
+          lda gameoptions+(2*20),x
+          sta screen+(19*40),y
+          eor #$40
+          sta screen+(19*40)+1,y 
+          lda gameoptions+(2*20),x
+          eor #$80
+          sta screen+(20*40),y
+          eor #$40
+          sta screen+(20*40)+1,y
+          inx
+          iny
+          iny
+          cpy #$28
+          bne fetch_option_text
+          lda #0
+          sta firebutton
+;----------------------------------------
+;Like with the title screen. Keep the
+;scrolling message active and colour
+;rasters cycling. Also use joystick 
+;control to select option.
+;----------------------------------------
+          
+game_options_loop
+          jsr sync_timer
+          jsr scrolltext_routine
+          jsr scroll_colour
+          jsr option_selector 
+          
+          
+          lda #1
+          bit $dc00
+          bne jp2optup
+          lda #0
+          sta gameoption 
+          jmp game_options_loop 
+          
+jp2optup  bit $dc01 
+          bne jp1optdown 
+          lda #0
+          sta gameoption 
+          jmp game_options_loop 
+          
+jp1optdown 
+          lda #2
+          bit $dc00 
+          bne jp2optdown 
+          lda #1
+          sta gameoption 
+          jmp game_options_loop 
+          
+jp2optdown
+         
+          bit $dc01 
+          bne j2optfire 
+          lda #1
+          sta gameoption 
+          jmp game_options_loop
+          
+j2optfire lda $dc00
+          lsr
+          lsr
+          lsr
+          lsr
+          lsr
+          bit firebutton
+          ror firebutton 
+          bmi j1optfire
+          bvc j1optfire
+          lda #0
+          sta firebutton
+          jmp check_option_before_play 
+          
+j1optfire lda $dc01
+          lsr
+          lsr
+          lsr
+          lsr
+          lsr
+          bit firebutton
+          ror firebutton
+          bmi skip_options
+          bvc skip_options 
+          jmp check_option_before_play 
+          
+skip_options
+          jmp game_options_loop
+          
+check_option_before_play
+          lda gameoption 
+          beq play_game 
+          lda #<errortemp 
+          sta messread+1
+          lda #>errortemp 
+          sta messread+2
+          lda #0
+          sta char
+          sta case
+          jmp game_options_loop 
+          
+play_game jmp game_code          
+          
+          
+;-----------------------------------------------
+;Game options selector up/down should display 
+;the arrow chars next to the game option.
+;-----------------------------------------------
+
+option_selector
+            lda gameoption
+            beq highlight_start_game
+            jmp highlight_view_hi_scores
+            
+;------------------------------------------------
+highlight_start_game
+            lda #$24
+            sta screen+(17*40)
+            lda #$24+$40
+            sta screen+(17*40)+1
+            lda #$24+$80
+            sta screen+(18*40)
+            lda #$24+$c0 
+            sta screen+(18*40)+1
+            lda #$25 
+            sta screen+(17*40)+38 
+            lda #$25+$40 
+            sta screen+(17*40)+39 
+            lda #$25+$80 
+            sta screen+(18*40)+38 
+            lda #$25+$c0 
+            sta screen+(18*40)+39
+            lda #$20
+            sta screen+(19*40) 
+            sta screen+(19*40)+1
+            sta screen+(20*40)
+            sta screen+(20*40)+1 
+            sta screen+(19*40)+38
+            sta screen+(19*40)+39
+            sta screen+(20*40)+38
+            sta screen+(20*40)+39
+            rts
+            
+highlight_view_hi_scores
+            
+            lda #$24
+            sta screen+(19*40)
+            lda #$24+$40
+            sta screen+(19*40)+1
+            lda #$24+$80
+            sta screen+(20*40)
+            lda #$24+$c0 
+            sta screen+(20*40)+1
+            lda #$25 
+            sta screen+(19*40)+38 
+            lda #$25+$40 
+            sta screen+(19*40)+39 
+            lda #$25+$80 
+            sta screen+(20*40)+38 
+            lda #$25+$c0 
+            sta screen+(20*40)+39
+            lda #$20
+            sta screen+(17*40) 
+            sta screen+(17*40)+1
+            sta screen+(18*40)
+            sta screen+(18*40)+1 
+            sta screen+(17*40)+38
+            sta screen+(17*40)+39
+            sta screen+(18*40)+38
+            sta screen+(18*40)+39
+            rts
+          
 xpos !byte 0        
 fadedelay !byte 0
 fadepointer  !byte 0
 fadestore !byte 0
 textpointer !byte 0
 scrolldelay !byte 0
+gameoption !byte 0
 case !byte 0
 char !byte 0
-interlace !byte $18
 texttable        
-line_table_lo !byte <line1,<line2,<line3,<line4,<line5
+line_table_lo !byte <line1,<line2,<line3,<line4,<line5,<line6,<line7
 texttableend
-line_table_hi !byte >line1,>line2,>line3,>line4,>line5
+line_table_hi !byte >line1,>line2,>line3,>line4,>line5,>line6,>line7
 
 fadecolourtable   
-              !byte $00,$00,$09,$02,$08,$0a,$0f,$07,$01
-              !byte $01,$01,$01,$01,$01,$01,$01,$01,$01
-              !byte $01,$01,$01,$01,$01,$01,$01,$01,$01
-              !byte $01,$01,$01,$01,$01,$01,$01,$01,$01
-              !byte $01,$01,$01,$01,$01,$01,$01,$01,$01
-              !byte $01,$07,$0f,$0a,$08,$02,$09,$00,$00
+             !byte $06,$06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$01 
+              !byte $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01
+              !byte $01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01,$01 
+              !byte $01,$0d,$07,$0f,$03,$0a,$05,$0e,$0c,$08,$04,$0b,$02,$09,$06,$06,$00,$00
 fadecolourtableend              
 
 scrollcolour !byte $06,$06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$01 
@@ -438,42 +658,60 @@ scrollcolour !byte $06,$06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$
 scrollcolourend              
 
         
-
+!align $ff,0
 ;2x2 charset text line presentation 
 
 !ct scr
 
 line1   !text "                    "
-        !text " copyright (c) 2022 "
-        !text "        blazon      "
+        !text "  a brand new game  "
+        !text "     from blazon    "
         !text "                    "
      
 line2   !text "  code, game fx and "
         !text "      music by      "
         !text "   richard bayliss  "
-        !text "  (starhawk/blazon) "
+        !text " a.k.a starhawk/blz "
         
 line3   !text " loading bitmap and "
         !text " front end graphics "
         !text "         by         "
-        !text "  firelord/excess.  "
+        !text "   firelord/excess  "
         
 line4   
-        !text "  press spacebar or "
-        !text "                    "
-        !text "  fire for options  "
-        !text "                    "
+        !text " tape loader system "
+        !text "         by         "
+        !text "  martin piper and  "
+        !text "  richard  bayliss  "
 line5   
         !text "                    "
-        !text "     have fun!!!    "
+        !text "     testing by     "
+        !text "   the blazon team  "
         !text "                    "
+line6   
+
+        !text "  press spacebar or "
+        !text " fire button on any "
+        !text "    joystick for    "
+        !text " main options screen"
+        
+line7
         !text "                    "
+        !text "      have fun      "
+        !text "        :-)         "
+        !text "                    "
+        
+        
+        
+
+             
         
 gameoptions
         !text "      options:      "
         !text "      play game     "
         !text "   hi score table   "
         
+errortemp !text "... hi scores not yet implemented ...                     "        
 textscreen
         !fill 80,$20
         

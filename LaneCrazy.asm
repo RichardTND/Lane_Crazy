@@ -1,4 +1,4 @@
-;========================================
+﻿;========================================
 ;Lane Crazy 
 ;by Richard (Starhawk) Bayliss
 ;(C) 2021 Blazon Games Division
@@ -125,8 +125,11 @@ gamescreen
 ;----------------------------------------
 ;2x2 Character set for front end 
  *=$3000
- !bin "bin\2x2charset.prg",,2
+ !bin "bin\titlecharset.chr"
 ;----------------------------------------
+;1x1 Character set for hi score table 
+ !bin "bin\hiscorecharset.chr"
+;---------------------------------------- 
 ;Insert Main game code
  *=$4000
  !source "gamecode.asm"

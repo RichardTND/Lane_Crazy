@@ -41,8 +41,8 @@ music2init = $6000
 music2play = $6003
 
 ;Hi score name entry music 
-music3init = $7000
-music3play = $7003
+music3init = $7100
+music3play = $7103
 
 ;Char values (These are
 ;the characters that form the
@@ -143,8 +143,8 @@ gamescreen
 !bin "bin\music2.prg",,2
 ;----------------------------------------
 ;Import hall of fame music data (DMC V4.0) 
-;*=$7000
- ;!bin "bin\music3.prg",,2
+*=$7100
+!bin "bin\music3.prg",,2
 ;-----------------------------------------
 ;Import title logo colour RAM, video RAM 
 ;and bitmap data

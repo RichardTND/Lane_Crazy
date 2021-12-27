@@ -664,14 +664,14 @@ scrollcolourend
 !ct scr
 
 line1   !text "                    "
-        !text "  a brand new game  "
-        !text "     from blazon    "
+        !text " copyright (c) 2022 "
+        !text "       blazon       "
         !text "                    "
      
-line2   !text "  code, game fx and "
+line2   !text " code, game gfx and "
         !text "      music by      "
         !text "   richard bayliss  "
-        !text " a.k.a starhawk/blz "
+        !text "  (starhawk/blazon) "
         
 line3   !text " loading bitmap and "
         !text " front end graphics "
@@ -684,9 +684,9 @@ line4
         !text "  martin piper and  "
         !text "  richard  bayliss  "
 line5   
-        !text "                    "
         !text "     testing by     "
-        !text "   the blazon team  "
+        !text " baracuda,  sleeper,"
+        !text "firelord and logiker"
         !text "                    "
 line6   
 
@@ -696,10 +696,10 @@ line6
         !text " main options screen"
         
 line7
-        !text "                    "
-        !text "      have fun      "
+        !text "  and don't forget  "
+        !text " we also make games "
+        !text "      you know      "
         !text "        :-)         "
-        !text "                    "
         
         
         

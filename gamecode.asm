@@ -23,8 +23,26 @@ game_code
           sei
           lda #0
           sta firebutton
-            
+        
           jsr clearint
+          
+          ;Immediately grab the hiscore from 
+          ;first place to hi score 
+          
+          ldx #$00
+gethi     lda hiscore1,x
+          sta hiscore,x
+          inx
+          cpx #6
+          bne gethi
+          ;Clear out score table 
+          ldx #$00
+clearscor lda #$30
+          sta score,x
+          inx
+          cpx #6
+          bne clearscor
+          
           lda #$7b 
           sta $d011
           ldx #$00
@@ -148,11 +166,6 @@ getscreen lda gamescreen,x
           cli
           jmp setup_get_ready 
 
-;---------------------------------------          
-;Main IRQ interrupts. This has to be 
-;divided, where one part is used for 
-;smooth scrolling and the other is being 
-;used for the score panel.
 ;----------------------------------------
 ;Main IRQ interrupts. This has to be 
 ;divided, where one part is used for 
@@ -210,8 +223,7 @@ game_irq3
           ldy #>game_irq4
           stx $0314
           sty $0315 
-          jmp $ea7e 
-          
+          jmp $ea7e
 game_irq4
           inc $d019 
           lda #split4
@@ -541,24 +553,26 @@ not_joy_left_port2
           sta joyright_p2 
           jmp triggerball4
           
-not_joy_right_port2          
+not_joy_right_port2  
+         
           ;Test keyboard input
+          jsr $ff9f
           jsr $ffe4
-          cmp #'A'
+          cmp #$41
           beq triggerball1
-          cmp #'S'
+          cmp #$53
           beq triggerball2
-          cmp #'D'
+          cmp #$44
           beq triggerball3
-          cmp #'F'
+          cmp #$46
           beq triggerball4
-          cmp #'H' 
+          cmp #$48 
           beq triggerball1
-          cmp #'J' 
+          cmp #$4A 
           beq triggerball2
-          cmp #'K' 
+          cmp #$4B 
           beq triggerball3
-          cmp #'L'
+          cmp #$4C
           beq triggerball4
           ;Now check if RUN/STOP has been pressed 
           ;to pause game.
@@ -1139,10 +1153,14 @@ deathframe2
           sta $07f9 
           inx
           cpx #5
-          beq do_game_over
+          beq game_over_now
           inc death_anim_pointer
           rts 
-          
+game_over_now
+          lda #$18
+          sta $d016
+          lda #$ff
+          sta $d015
 
 ;----------------------------------------
 ;The game is over. Play GAME OVER jingle
@@ -1566,9 +1584,9 @@ hole4 !byte $2c,$2e ,$36,$38 ,$40,$42 ,$4a,$4c
 ;Level table. (Based on speed and amount)
 
 level_speed_table 
-            !byte 1,1,1,1,2,2,2,2
+            !byte 1,1,2,2,3,3,4,4
 level_time_table
-            !byte $10,$08,$06,$04,$0e,$0c,$0a,$08
+            !byte $04,$02,$04,$02,$04,$02,$04,$02
 level_colour_table
             !byte $06,$0b,$09,$02,$0e,$0c,$08,$04
 level_charset_table_lo 
@@ -1606,5 +1624,4 @@ game_over_flash_table
                   !byte $06,$04,$0e,$03,$0d,$01,$0d,$03,$0e,$04,$06
                   !byte $09,$02,$08,$0a,$07,$01,$07,$0a,$08,$02,$09
 flash_length      
-                  
-                  
+          

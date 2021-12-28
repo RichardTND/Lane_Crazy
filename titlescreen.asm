@@ -156,7 +156,7 @@ tirq2    ;Logo displayer
         sta $d018 
         lda #$01
         sta $dd00
-        lda #0
+        lda #1
         sta $d021
     ;    lda #2
     ;    sta $d020 
@@ -170,6 +170,7 @@ tirq3    ;Text fader
         asl $d019 
         lda #$e2 
         sta $d012 
+        
         
         lda #$1b 
         sta $d011
@@ -550,13 +551,7 @@ skip_options
 check_option_before_play
           lda gameoption 
           beq play_game 
-          lda #<errortemp 
-          sta messread+1
-          lda #>errortemp 
-          sta messread+2
-          lda #0
-          sta char
-          sta case
+          jmp display_hiscores
           jmp game_options_loop 
           
 play_game jmp game_code          

@@ -14,14 +14,14 @@
 ;VARIABLES
  
 ;Run address for title screen code
-titlescreen = $4000 
+titlescreen = title_screen
 ;Run address
-check_hall_of_fame = $4000 
+check_hall_of_fame = hiscore_checker
 
 ;Where the wrapping screen backup is 
 ;positioned in order to build a lane 
-screentemp = $c000
-screenbackup = $c100
+screentemp = $ce00
+screenbackup = $cf00
 
 ;Hardware screen + Colour RAM 
 screen = $0400
@@ -78,7 +78,7 @@ xrightstop4 = $96
 ;Zero page address for sprite to background collision
 ;this can be changed where necessary.
 
-zp = $02
+zp = $70
 
 ;Sprite values 
 
@@ -99,7 +99,16 @@ split2 = $d0
 split3 = $da
 split4 = $fa
 
+;Colour RAM position for logo colours 
+
 logocolour = $8000
+
+;Hi Score table variables 
+
+scorelength = 6
+listlength = 10
+namelength = 9
+
 ;----------------------------------------
 ;Import in game charset data from raw
 ;binary 
@@ -132,6 +141,9 @@ gamescreen
 ;---------------------------------------- 
 ;Insert Main game code
  *=$4000
+ sei
+
+ jsr load_hi_scores
  !source "gamecode.asm"
 ;----------------------------------------
 ;Insert title screen code 
@@ -157,3 +169,11 @@ gamescreen
 *=$a000
   !bin "bin\logo-bitmap.prg",,2
 ;------------------------------------------
+;Hi score display and routines.
+*=$c000
+  !source "hiscore.asm"
+;------------------------------------------
+;Disk access routines  
+  !align $ff,$00
+  !source "diskaccess.asm"
+  

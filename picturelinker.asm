@@ -134,15 +134,15 @@ silentchip
         sta $0800
         cli
         jmp $0400
-transfer 
+transfer  
         sei
-       
+        
         lda #$34
         sta $01
 tloop1  ldx #0
 tloop2  lda $4800,x
         sta $0801,x
-        inx
+        inx 
         bne tloop2
         inc $0409
         inc $040c
@@ -150,9 +150,8 @@ tloop2  lda $4800,x
         bne tloop1
         lda #$37
         sta $01
-        jsr $a659
-        jmp $a7ae
-        
+        cli
+        jmp $080d
 irq     asl $d019
         lda $dc0d
         sta $dd0d

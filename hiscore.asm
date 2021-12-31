@@ -237,6 +237,7 @@ hi_up1          lda #1
 hi_up2          lda #1
                 bit $dc01
                 bne hi_down1
+                jmp letter_up
 hi_down1        lda #2
                 bit $dc00
                 bne hi_down2

@@ -9,9 +9,9 @@
  ;Generate target program file 
  ;(No BASIC run, unless crunched)
  
- !to "lanecrazy.prg",cbm
+ !to "lanecrazy.prg",cbm 
 ;----------------------------------------
-;VARIABLES
+;VARIABLES 
  
 ;Run address for title screen code
 titlescreen = title_screen
@@ -61,9 +61,9 @@ paralaxchar4 = gamecharset+(44*8)
 
 scrollchar1 = gamecharset+(80*8)
 scrollchar2 = gamecharset+(84*8)
-scrollchar3 = gamecharset+(88*8)
+scrollchar3 = gamecharset+(88*8) 
 scrollchar4 = gamecharset+(90*8)
-;Stop zone position for balls
+;Stop zone position for balls 
 ;every time they move.
 
 xleftstop1 = $16
@@ -94,7 +94,7 @@ sprite_O = $97
 sprite_V = $98
 
 ;In game raster splits 
-split1 = $30
+split1 = $22
 split2 = $d0
 split3 = $da
 split4 = $fa

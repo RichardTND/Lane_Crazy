@@ -8,9 +8,9 @@
 
 !ct scr
 scrolltext
-!text "... welcome to lane crazy ...   a fun party game which is guaranteed to drive you "
+!text "... welcome to lane crazy ...   a fun five minutes party game which is guaranteed to drive you "
 !text "insane if you lose the game too much that is :-) ...   code, graphics (except for logo) and "
-!text "music were all done by me, starhawk ...   while firelord did the rest of the "
+!text "music were all done by me, starhawk while firelord did the rest of the "
 !text "painting ...   and now i give you the instructions ...   "
 !text "this game is controlled using keys a,s,d,f, or h,j,k,l or perhaps both ...   if using keyboard while you are "
 !text "entering your name for the hi score table, use <- and 1 to act as up and down ...    you can also use a joystick in either port "
@@ -22,7 +22,7 @@ scrolltext
 !text "keys indicated earlier in the instructions ...   or use joystick corresponding to the arrows "
 !text "underneath each lane ...   units in 100 points are scored for every hole you "
 !text "have passed on your travel ...   there are eight levels in total, where even more holes will start to appear ...   "
-!text "after every 2 levels, the lanes will become more steeper ...   keep on scoring those points, and try to "
+!text "after every 2 levels, the lanes will become more steeper ...   where as level 8 is the fastest level of them all ...    keep on scoring those points, and try to "
 !text "make a place in the hall of fame, if you can ...   have fun ...   press spacebar or fire to start ...   "
 !text "                                                  "
 !byte 0

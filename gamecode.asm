@@ -5,6 +5,9 @@
 ;========================================
 ;Main game code
 ;========================================
+
+spawnlimit=$09
+
 onetime
           lda $02a6 ;<--- Remove this when final build
           sta system ;is ready and place at the beginning of code
@@ -149,7 +152,7 @@ getscreen lda gamescreen,x
           lda #$7f
           sta $dc0d
           sta $dd0d
-          lda #$32
+          lda #$2e
           sta $d012
           lda #$1b
           sta $d011
@@ -176,7 +179,9 @@ getscreen lda gamescreen,x
 
 game_irq1
           ;Raster split 1 
-          inc $d019
+          asl $d019
+          lda $dc0d
+          sta $dd0d
           lda #split1
           sta $d012
 levelcolour1 
@@ -185,8 +190,7 @@ levelcolour1
 levelcolour2          
           lda #$01
           sta $d023
-          
-          jsr musicplayer
+    
          
           ldx #<game_irq2
           ldy #>game_irq2 
@@ -195,7 +199,7 @@ levelcolour2
           jmp $ea31
           
           ;Raster split2 
-game_irq2 inc $d019
+game_irq2 asl $d019
           lda #split2
           sta $d012 
           lda ypos
@@ -209,7 +213,7 @@ game_irq2 inc $d019
           
           ;Raster 3
 game_irq3 
-          inc $d019
+          asl $d019
           lda #split3
           sta $d012
           lda #$7f 
@@ -218,24 +222,25 @@ game_irq3
           sta $d022
           lda #$01
           sta $d023
-         
+      
           ldx #<game_irq4
           ldy #>game_irq4
           stx $0314
           sty $0315 
           jmp $ea7e
 game_irq4
-          inc $d019 
+          asl $d019 
+       
           lda #split4
           sta $d012 
           lda #$1f
           sta $d011
-             lda #1
-          sta rt   
           ldx #<game_irq1
           ldy #>game_irq1
           stx $0314
           sty $0315
+                    
+          jsr musicplayer
           jmp $ea7e
           
           
@@ -780,10 +785,11 @@ scrollactive
           sta ypos
           
      
-          jsr shiftrows1
-          ;jsr shiftrows2
+          jsr layer1
+          jsr layer2
           jsr pick_holes
           jsr scoreit2 
+        
 passcheck          
           ldx #$27
 checkpass
@@ -796,7 +802,7 @@ checkpass
 scoreit_  jmp scoreit
           ;Hard scroll segment 1
       
-shiftrows1
+layer1
           ldx #$27
 sr01          
           lda screen+(10*40),x 
@@ -828,9 +834,11 @@ sr01
           sta screenbackup+40,x
           dex
           bpl sr01
-          
+          rts
+layer2          
           ldx #$27
-sr02      lda screen+(18*40),x
+sr02     
+          lda screen+(18*40),x
           sta screen+(19*40),x
           lda screen+(17*40),x
           sta screen+(18*40),x
@@ -851,20 +859,29 @@ sr02      lda screen+(18*40),x
          
           dex
           bpl sr02
+
           jsr fetch_lane
 skipspawn          
           rts
                  
+
 ;Randomizer - Pick holes for game_irq1
           
 pick_holes          
-
+          
+          
           inc spawntime
           lda spawntime
-          cmp #1
-          beq skipspawn
-          cmp #$10
+          cmp spawnlimit
           beq spawnhole
+          cmp #1
+          beq skipfill
+          jmp filllane
+skipfill          
+          rts
+           
+
+filllane          
           lda #lanechar ;Empty lane/space
           sta screenbackup+$03
           sta screenbackup+$04
@@ -927,23 +944,33 @@ spawnhole
           ldy holeposition
           lda hole1,y
           sta csm1+1
+          lda #>screenbackup
+          sta csm1+2
           lda hole2,y
           sta csm2+1
+          lda #>screenbackup
+          sta csm2+2
           lda hole3,y
           sta csm3+1
+          lda #>screenbackup
+          sta csm3+2
           lda hole4,y
           sta csm4+1
+          lda #>screenbackup
+          sta csm4+2
           
           ;Store holes 
           
           lda #holechar1
 csm1      sta screenbackup
           lda #holechar2
-csm2      sta screenbackup
+csm2      sta screenbackup+1
           lda #holechar3
-csm3      sta screenbackup
+csm3      sta screenbackup+40
           lda #holechar4
-csm4      sta screenbackup
+csm4      sta screenbackup+41
+          
+        
           rts
 
 ;Backup and fetch last lane position 
@@ -954,6 +981,8 @@ placenext lda screen+(18*40),x
           sta screenbackup,x 
           dex
           bpl placenext
+          
+         
           rts
 ;----------------------------------------          
 ;Sprite to character set collision - 
@@ -1297,7 +1326,7 @@ game_over_loop2
 ;----------------------------------------
 playing_time 
           lda leveltime
-          cmp #$32
+          cmp #$30
           beq onesecond
           inc leveltime
           rts
@@ -1312,13 +1341,20 @@ onesecond
           inc leveltime+1
           rts
 oneminute          
-          
+            
 ;----------------------------------------          
 ;Setup levels 
 ;----------------------------------------
 level_setup
           lda #0
           sta spawntime
+          lda spawntime 
+          cmp spawnlimit
+          bcs noresetspawntime
+          lda #0
+          sta spawntime
+         
+noresetspawntime          
           lda #0
           sta leveltime
           sta leveltime+1
@@ -1335,23 +1371,25 @@ level_setup
           sta charsm+1
           lda level_charset_table_hi,x
           sta charsm+2
+          inx
+          cpx #8
+          bcs stop
           
-        
-          lda levelpointer
-          cmp #9
-          beq stop
-          inc levelpointer
-          inc leveltext+1
           ldx #$00
 charsm    lda scrollchar1,x
           sta paralaxchar1,x
           inx
           cpx #32
           bne charsm
+          inc levelpointer
+          inc leveltext+1
           jsr maskpanel
+          
           rts
-stop      ldx #8
+stop      ldx #7
           stx levelpointer
+          lda #$38
+          sta leveltext+1
           jsr maskpanel
           rts
           
@@ -1466,7 +1504,8 @@ uploop4           lda paralaxchar4+1,x
 ;PAL/NTSC music IRQ player          
 ;----------------------------------------          
 musicplayer
-      
+          lda #1
+          sta rt
         
           lda system
           cmp #1
@@ -1527,10 +1566,9 @@ ball_3_is_moving !byte 0
 ball_4_is_moving !byte 0
 animdelay !byte 0
 animpointer !byte 0
-
+holetemp !byte 0
 holeposition !byte 0
 spawntime !byte 0
-spawnlimit !byte 0
 spriteflashdelay !byte 0
 spriteflashpointer !byte 0
 spriteflashcolour1 !byte 0
@@ -1584,9 +1622,9 @@ hole4 !byte $2c,$2e ,$36,$38 ,$40,$42 ,$4a,$4c
 ;Level table. (Based on speed and amount)
 
 level_speed_table 
-            !byte 1,1,2,2,3,3,4,4
+            !byte 1,1,2,2,3,3,4,5
 level_time_table
-            !byte $04,$02,$04,$02,$04,$02,$04,$02
+            !byte $09,$07,$0f,$0c,$0d,$09,$07,$07
 level_colour_table
             !byte $06,$0b,$09,$02,$0e,$0c,$08,$04
 level_charset_table_lo 

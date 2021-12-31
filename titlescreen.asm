@@ -112,6 +112,9 @@ tirq1    asl $d019
         sta $dd0d
         lda #$2e
         sta $d012
+        nop
+        nop
+        
         lda #0
         sta $d020
         lda #$1b 
@@ -226,7 +229,7 @@ jp2     lda $dc00
 scrolltext_routine
         lda xpos
         sec
-        sbc #3
+        sbc #2
         and #7
         sta xpos
         bcs exitscroll
@@ -635,9 +638,9 @@ gameoption !byte 0
 case !byte 0
 char !byte 0
 texttable        
-line_table_lo !byte <line1,<line2,<line3,<line4,<line5,<line6,<line7
+line_table_lo !byte <line1,<line2,<line3,<line4,<line5,<line6,<line7,<line8
 texttableend
-line_table_hi !byte >line1,>line2,>line3,>line4,>line5,>line6,>line7
+line_table_hi !byte >line1,>line2,>line3,>line4,>line5,>line6,>line7,>line8
 
 fadecolourtable   
              !byte $06,$06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$01 
@@ -646,10 +649,9 @@ fadecolourtable
               !byte $01,$0d,$07,$0f,$03,$0a,$05,$0e,$0c,$08,$04,$0b,$02,$09,$06,$06,$00,$00
 fadecolourtableend              
 
-scrollcolour !byte $06,$06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$01 
-              !byte $01,$0d,$07,$0f,$03,$0a,$05,$0e,$0c,$08,$04,$0b,$02,$09,$06,$06
-              !byte $06,$06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$01 
-              !byte $01,$0d,$07,$0f,$03,$0a,$05,$0e,$0c,$08,$04,$0b,$02,$09,$06,$06
+scrollcolour !byte $06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$01 
+              !byte $01,$0d,$07,$0f,$03,$0a,$05,$0e,$0c,$08,$04,$0b,$02,$09,$06,$09,$02,$0b,$04,$08,$0c,$0e,$05,$0a,$03,$0f,$07,$0d,$01 
+              !byte $01,$0d,$07,$0f,$03,$0a,$05,$0e,$0c,$08,$04,$0b,$02,$09
 scrollcolourend              
 
         
@@ -663,37 +665,42 @@ line1   !text "                    "
         !text "       blazon       "
         !text "                    "
      
-line2   !text " code, game gfx and "
+line2   !text " brought to you on  "
+        !text "      zzap 64       "
+        !text "   micro action's   "
+        !text "     covermount     "
+     
+line3   !text " code, game gfx and "
         !text "      music by      "
         !text "   richard bayliss  "
         !text "  (starhawk/blazon) "
         
-line3   !text " loading bitmap and "
+line4   !text " loading bitmap and "
         !text " front end graphics "
         !text "         by         "
         !text "   firelord/excess  "
         
-line4   
+line5   
         !text " tape loader system "
         !text "         by         "
         !text "  martin piper and  "
         !text "  richard  bayliss  "
-line5   
+line6   
         !text "     testing by     "
         !text " baracuda,  sleeper,"
         !text "firelord and logiker"
         !text "                    "
-line6   
+line7   
 
         !text "  press spacebar or "
         !text " fire button on any "
         !text "    joystick for    "
         !text " main options screen"
         
-line7
-        !text "  and don't forget  "
-        !text " we also make games "
-        !text "      you know      "
+line8
+        !text "                    "
+        !text " have fun losing at "
+        !text "     this game!     "
         !text "        :-)         "
         
         
@@ -705,8 +712,7 @@ gameoptions
         !text "      options:      "
         !text "      play game     "
         !text "   hi score table   "
-        
-errortemp !text "... hi scores not yet implemented ...                     "        
+                
 textscreen
         !fill 80,$20
         

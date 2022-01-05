@@ -152,7 +152,7 @@ getscreen lda gamescreen,x
           lda #$7f
           sta $dc0d
           sta $dd0d
-          lda #$2e
+          lda #$02
           sta $d012
           lda #$1b
           sta $d011
@@ -182,6 +182,7 @@ game_irq1
           asl $d019
           lda $dc0d
           sta $dd0d
+       
           lda #split1
           sta $d012
 levelcolour1 
@@ -190,7 +191,7 @@ levelcolour1
 levelcolour2          
           lda #$01
           sta $d023
-    
+         
          
           ldx #<game_irq2
           ldy #>game_irq2 
@@ -204,6 +205,8 @@ game_irq2 asl $d019
           sta $d012 
           lda ypos
           sta $d011
+          lda #$ff
+          sta $d015
           ldx #<game_irq3
           ldy #>game_irq3 
           stx $0314
@@ -218,11 +221,14 @@ game_irq3
           sta $d012
           lda #$7f 
           sta $d011
+          lda #0
+          sta $d015
           lda #$0e
           sta $d022
           lda #$01
           sta $d023
-      
+           lda #1
+          sta rt
           ldx #<game_irq4
           ldy #>game_irq4
           stx $0314
@@ -233,14 +239,15 @@ game_irq4
        
           lda #split4
           sta $d012 
+          
           lda #$1f
           sta $d011
           ldx #<game_irq1
           ldy #>game_irq1
           stx $0314
           sty $0315
-                    
-          jsr musicplayer
+           jsr musicplayer          
+         
           jmp $ea7e
           
           
@@ -784,7 +791,7 @@ scrollactive
           lda #$10
           sta ypos
           
-     
+         
           jsr layer1
           jsr layer2
           jsr pick_holes
@@ -827,13 +834,17 @@ sr01
           sta screen+(2*40),x
           lda screen,x
           sta screen+(1*40),x 
+          dex
+          bpl sr01
           
+          ldx #$27
+sr00          
           lda screenbackup+40,x
           sta screen,x
           lda screenbackup,x
           sta screenbackup+40,x
           dex
-          bpl sr01
+          bpl sr00
           rts
 layer2          
           ldx #$27
@@ -865,8 +876,7 @@ skipspawn
           rts
                  
 
-;Randomizer - Pick holes for game_irq1
-          
+;Randomizer - Pick holes
 pick_holes          
           
           
@@ -1504,8 +1514,7 @@ uploop4           lda paralaxchar4+1,x
 ;PAL/NTSC music IRQ player          
 ;----------------------------------------          
 musicplayer
-          lda #1
-          sta rt
+         
         
           lda system
           cmp #1

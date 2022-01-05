@@ -1,0 +1,2 @@
+The digital version of the tape is built for use in C64 emulators, Ultimate 64 and theC64. The tape image was compiled using TapeTool V1.0..0.5 by Martin Piper. The digital .tap version has no gaps during turbo load, as this is not supported in TapeTool's executable.
+If you want to make a tape that is compatible with real tape hardware. It is strongly recommended that you load in "Lane_Crazy_Tape_Master_Disk.d64", and record a C64 master tape.

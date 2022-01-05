@@ -94,7 +94,7 @@ sprite_O = $97
 sprite_V = $98
 
 ;In game raster splits 
-split1 = $22
+split1 = $22 
 split2 = $d0
 split3 = $da
 split4 = $fa
